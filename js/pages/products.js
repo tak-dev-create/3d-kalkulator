@@ -3,7 +3,7 @@ import * as S from '../store.js';
 import { defaults, fieldOf, SCHEMAS } from '../schema.js';
 import { money, fmt, pct, hoursToHM } from '../util.js';
 import { productCostOf, byName, isLow } from '../model.js';
-import { Fields, PageHead, ImageGallery, Thumb, SearchBox, Empty, StockBadge, textMatch, go } from '../components.js';
+import { Fields, PageHead, ImageGallery, Thumb, SearchBox, Empty, StockBadge, textMatch, go, refLabel } from '../components.js';
 import { useEditor, NotFound, StockPanel, SaveBar } from '../crud.js';
 
 export function Products({ parts }) {
@@ -24,7 +24,7 @@ function ProductList() {
         <${Thumb} src=${p.thumb} icon="🧩"/>
         <div class="grow">
           <div class="title">${p.name} ${isLow('products', p) && html`<span class="badge warn">Lavt lager</span>`}</div>
-          <div class="muted small">${[mat?.name, p.grams ? fmt(p.grams, 0) + ' g' : '', p.printTime, p.customer].filter(Boolean).join(' · ')}</div>
+          <div class="muted small">${[mat && refLabel('materials', mat), p.grams ? fmt(p.grams, 0) + ' g' : '', p.printTime, p.customer].filter(Boolean).join(' · ')}</div>
         </div>
         <div class="metric hide-sm"><div>${money(k.unitCost)}</div><div class="muted">selvkost</div></div>
         <div class="metric"><div>${k.quoted ? money(k.quoted) : money(k.suggested)}</div><div class="muted">${k.quoted ? 'salgspris' : 'foreslått'}</div></div>

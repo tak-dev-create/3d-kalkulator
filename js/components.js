@@ -90,15 +90,35 @@ export function BarcodeInput({ value, onChange }) {
   </div>`;
 }
 
+// Visningsnavn i nedtrekkslister – filament viser fabrikant, materiale og farge
+export function refLabel(c, o) {
+  if (c === 'materials') {
+    const extra = [o.material, o.color].filter(Boolean).join(', ');
+    return extra ? `${o.name} – ${extra}` : o.name;
+  }
+  return o.name;
+}
+function materialDetails(m) {
+  return [
+    m.color && `Farge: ${m.color}`,
+    m.material,
+    num(m.diameter) ? `${fmt(m.diameter)} mm` : '',
+    `Lager: ${fmt(num(m.stockGrams), 0)} g`,
+    m.location && `Plass: ${m.location}`,
+  ].filter(Boolean).join(' · ');
+}
+
 export function Field({ f, value, onChange, readOnly }) {
   let input;
   if (readOnly) input = html`<input readonly value=${f.t === 'num' || f.t === 'int' ? toInput(value) : (value ?? '')}/>`;
   else if (f.t === 'textarea') input = html`<textarea value=${value || ''} placeholder=${f.ph || ''} onInput=${e => onChange(e.target.value)}/>`;
   else if (f.t === 'num' || f.t === 'int') input = html`<${NumInput} int=${f.t === 'int'} value=${value} onChange=${onChange}/>`;
   else if (f.t === 'ref') {
-    const opts = S.list(f.ref).sort(byName);
+    const opts = S.list(f.ref).sort((a, b) => byName(a, b) || String(a.color || '').localeCompare(String(b.color || ''), 'nb'));
+    const sel = S.get(f.ref, value);
     input = html`<select value=${value || ''} onChange=${e => onChange(e.target.value)}>
-      <option value="">– velg –</option>${opts.map(o => html`<option value=${o.id}>${o.name}</option>`)}</select>`;
+      <option value="">– velg –</option>${opts.map(o => html`<option value=${o.id}>${refLabel(f.ref, o)}</option>`)}</select>
+      ${f.ref === 'materials' && sel && html`<span class="help">${materialDetails(sel)}</span>`}`;
   } else if (f.t === 'barcode') input = html`<${BarcodeInput} value=${value} onChange=${onChange}/>`;
   else if (f.t === 'date') input = html`<input type="date" value=${value || ''} onInput=${e => onChange(e.target.value)}/>`;
   else if (f.t === 'hm') input = html`<input type="text" inputmode="numeric" placeholder="t:mm" value=${value || ''} onInput=${e => onChange(e.target.value)}/>`;
