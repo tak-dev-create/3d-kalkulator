@@ -1,6 +1,6 @@
 // Service worker: gjør appen tilgjengelig offline og installerbar.
 // Øk versjonen ved hver publisering for å tvinge oppdatering.
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = '3dkalk-' + VERSION;
 const CORE = [
   './', './index.html', './styles.css', './manifest.webmanifest',

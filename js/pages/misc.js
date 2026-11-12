@@ -6,7 +6,7 @@ import { money, fmt, fmtDate, num } from '../util.js';
 import {
   productCostOf, packageCostOf, isLow, stockOf, unitOf, byName, seedOps, STOCK_COLLS, TYPE_LABEL, TYPE_ROUTE, TYPE_ICON,
 } from '../model.js';
-import { PageHead, Fields, Empty, SearchBox, Seg, Modal, toast, go, textMatch } from '../components.js';
+import { PageHead, Fields, Empty, SearchBox, Seg, Modal, toast, go, textMatch, refLabel } from '../components.js';
 import { exportExcel, fullBackup, exportImages, parseBackup, restore, DATA_COLLS } from '../backup.js';
 
 const daysSince = ts => (ts ? (Date.now() - ts) / 86400000 : Infinity);
@@ -50,16 +50,25 @@ export function Dashboard() {
       <a class="stat" href="#/utstyr/filament"><div class="v">${fmt(mats.reduce((a, m) => a + Math.max(0, stockOf('materials', m)), 0) / 1000, 2)} kg</div><div class="l">🧵 Filament på lager</div></a>
       <div class="stat"><div class="v">${money(stockValue)}</div><div class="l">Lagerverdi (selvkost)</div></div>
     </div>
-    <div class="editor" style="grid-template-columns: minmax(0,1fr) minmax(0,1fr)">
+    <div class="two-col">
       <div class="panel"><h2>Lavt lager ${low.length > 0 && html`<span class="badge warn">${low.length}</span>`}</h2>
-        ${low.length === 0 ? html`<p class="muted">Alt over varslingsgrensen 👍</p>` : html`<table><tbody>${low.map(({ c, i }) => html`
-          <tr class="click" onClick=${() => go(TYPE_ROUTE[c] + '/' + i.id)}><td>${TYPE_ICON[c]} ${i.name}</td>
-          <td class="num ${stockOf(c, i) <= 0 ? 'neg' : ''}">${fmt(stockOf(c, i))} ${unitOf(c, i)}</td><td class="num muted small">min ${fmt(i.lowStock)}</td></tr>`)}</tbody></table>`}
+        ${low.length === 0 ? html`<p class="muted">Alt over varslingsgrensen 👍</p>` : html`<div class="mini-list">${low.map(({ c, i }) => {
+          const label = c === 'materials' ? refLabel('materials', i) : i.name;
+          return html`<a class="mini-row" key=${c + i.id} href=${'#/' + TYPE_ROUTE[c] + '/' + i.id}>
+            <span class="ico">${TYPE_ICON[c]}</span>
+            <div class="mini-main"><div class="mini-name">${label}</div><div class="mini-sub">${TYPE_LABEL[c]}${i.location ? ' · ' + i.location : ''}</div></div>
+            <div class="mini-val"><div class=${stockOf(c, i) <= 0 ? 'neg' : ''}>${fmt(stockOf(c, i))} ${unitOf(c, i)}</div>
+              <div class="mini-sub">min ${fmt(i.lowStock)}</div></div>
+          </a>`;
+        })}</div>`}
       </div>
       <div class="panel"><h2>Siste lagerbevegelser</h2>
-        ${moves.length === 0 ? html`<p class="muted">Ingen bevegelser ennå.</p>` : html`<table><tbody>${moves.map(m => html`
-          <tr><td class="small muted">${fmtDate(m.ts)}</td><td>${m.name}<div class="small muted">${m.reason}</div></td>
-          <td class=${'num ' + (m.delta < 0 ? 'neg' : 'pos')}>${m.delta > 0 ? '+' : ''}${fmt(m.delta)} ${m.unit}</td></tr>`)}</tbody></table>
+        ${moves.length === 0 ? html`<p class="muted">Ingen bevegelser ennå.</p>` : html`<div class="mini-list">${moves.map(m => html`
+          <div class="mini-row" key=${m.id}>
+            <span class="ico">${TYPE_ICON[m.c] || ''}</span>
+            <div class="mini-main"><div class="mini-name">${m.name}</div><div class="mini-sub">${fmtDate(m.ts)} · ${m.reason}</div></div>
+            <div class="mini-val"><span class=${m.delta < 0 ? 'neg' : 'pos'}>${m.delta > 0 ? '+' : ''}${fmt(m.delta)} ${m.unit}</span></div>
+          </div>`)}</div>
           <a href="#/logg" class="small">Se hele loggen →</a>`}
       </div>
     </div>`;
@@ -119,7 +128,7 @@ export function Backup() {
     <${PageHead} title="Backup og gjenoppretting"/>
     <p class="muted">Siste backup: <b>${s.lastBackupAt ? fmtDate(s.lastBackupAt) : 'aldri'}</b>${s.lastBackupBy ? ` av ${s.lastBackupBy}` : ''}</p>
     ${busy && html`<div class="notice info">⏳ ${busy}</div>`}
-    <div class="editor" style="grid-template-columns: minmax(0,1fr) minmax(0,1fr)">
+    <div class="two-col" style="margin-bottom:14px">
       <div class="panel">
         <h2>📊 Excel-backup</h2>
         <p>Alle data (produkter, rekvisita, pakker, filament, printere, innstillinger og lagerlogg) i én Excel-fil. Kan åpnes og redigeres i Excel. Bilder er ikke med.</p>
