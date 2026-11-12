@@ -66,7 +66,7 @@ export function Dashboard() {
         ${moves.length === 0 ? html`<p class="muted">Ingen bevegelser ennå.</p>` : html`<div class="mini-list">${moves.map(m => html`
           <div class="mini-row" key=${m.id}>
             <span class="ico">${TYPE_ICON[m.c] || ''}</span>
-            <div class="mini-main"><div class="mini-name">${m.name}</div><div class="mini-sub">${fmtDate(m.ts)} · ${m.reason}</div></div>
+            <div class="mini-main"><div class="mini-name">${m.name}</div><div class="mini-sub">${[fmtDate(m.ts), m.reason, m.user && m.user !== S.userEmail() ? m.user : ''].filter(Boolean).join(' · ')}</div></div>
             <div class="mini-val"><span class=${m.delta < 0 ? 'neg' : 'pos'}>${m.delta > 0 ? '+' : ''}${fmt(m.delta)} ${m.unit}</span></div>
           </div>`)}</div>
           <a href="#/logg" class="small">Se hele loggen →</a>`}
