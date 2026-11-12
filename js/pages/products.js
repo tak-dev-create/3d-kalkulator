@@ -3,7 +3,7 @@ import * as S from '../store.js';
 import { defaults, fieldOf, SCHEMAS } from '../schema.js';
 import { money, fmt, pct, hoursToHM } from '../util.js';
 import { productCostOf, byName, isLow } from '../model.js';
-import { Fields, PageHead, ImageGallery, Thumb, SearchBox, Empty, StockBadge, textMatch, go, refLabel } from '../components.js';
+import { Fields, PageHead, ImageGallery, Thumb, SearchBox, Empty, StockBadge, textMatch, go, refLabel, ProfitSummary } from '../components.js';
 import { useEditor, NotFound, StockPanel, SaveBar } from '../crud.js';
 
 export function Products({ parts }) {
@@ -13,12 +13,22 @@ export function Products({ parts }) {
 function ProductList() {
   const [q, setQ] = useState('');
   const items = S.list('products').filter(p => textMatch(q, p.name, p.barcode, p.category, p.customer, p.description)).sort(byName);
+  const s = S.settings();
+  const costs = new Map(items.map(p => [p.id, productCostOf(p)]));
+  const rows = items.map(p => {
+    const k = costs.get(p.id);
+    const price = k.quoted > 0 ? k.net : k.suggested;
+    return { stock: p.stock, cost: k.unitCost, price, profit: price - k.unitCost };
+  });
   return html`
     <${PageHead} title="Produkter & kalkyle"><button class="btn primary" onClick=${() => go('produkter/ny')}>+ Ny kalkyle</button><//>
     <${SearchBox} value=${q} onInput=${setQ} placeholder="Søk på navn, kunde, kategori, strekkode …"/>
+    ${items.length > 0 && html`<${ProfitSummary} rows=${rows} count=${items.length}/>
+      <p class="muted small" style="margin-top:-6px">Lagersummer bruker salgspris${s.vatRate ? ' eks. MVA' : ''}, eller foreslått pris der salgspris mangler. Linjene viser fortjeneste per stk (* = beregnet fra foreslått pris).</p>`}
     ${items.length === 0 ? html`<${Empty} icon="🧮" title="Ingen produkter ennå">Lag en ny kalkyle for å beregne pris på et 3D-print.<//>` : html`
     <div class="cards">${items.map(p => {
-      const k = productCostOf(p);
+      const k = costs.get(p.id);
+      const pr = k.profit ?? (k.suggested - k.unitCost);
       const mat = S.get('materials', p.materialId);
       return html`<a class="item" key=${p.id} href=${'#/produkter/' + p.id}>
         <${Thumb} src=${p.thumb} icon="🧩"/>
@@ -28,6 +38,7 @@ function ProductList() {
         </div>
         <div class="metric hide-sm"><div>${money(k.unitCost)}</div><div class="muted">selvkost</div></div>
         <div class="metric"><div>${k.quoted ? money(k.quoted) : money(k.suggested)}</div><div class="muted">${k.quoted ? 'salgspris' : 'foreslått'}</div></div>
+        <div class="metric"><div class=${pr < 0 ? 'neg' : 'pos'}>${money(pr)}</div><div class="muted">fortjeneste${k.quoted ? '' : '*'}</div></div>
         <div class="metric hide-sm"><${StockBadge} c="products" item=${p}/></div>
       </a>`;
     })}</div>`}`;

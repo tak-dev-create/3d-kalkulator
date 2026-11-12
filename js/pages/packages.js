@@ -3,7 +3,7 @@ import * as S from '../store.js';
 import { defaults, fieldOf } from '../schema.js';
 import { money, fmt, pct, num } from '../util.js';
 import { packageCostOf, packagesPossible, byName, findByBarcode, stockOf, unitOf, isLow, TYPE_LABEL } from '../model.js';
-import { Fields, PageHead, ImageGallery, Thumb, SearchBox, Empty, StockBadge, NumInput, ScannerModal, textMatch, toast, go } from '../components.js';
+import { Fields, PageHead, ImageGallery, Thumb, SearchBox, Empty, StockBadge, NumInput, ScannerModal, textMatch, toast, go, ProfitSummary } from '../components.js';
 import { useEditor, NotFound, StockPanel, SaveBar } from '../crud.js';
 
 export function Packages({ parts }) {
@@ -13,13 +13,23 @@ export function Packages({ parts }) {
 function PackageList() {
   const [q, setQ] = useState('');
   const items = S.list('packages').filter(p => textMatch(q, p.name, p.barcode, p.category, p.description)).sort(byName);
+  const s = S.settings();
+  const costs = new Map(items.map(p => [p.id, packageCostOf(p)]));
+  const rows = items.map(p => {
+    const k = costs.get(p.id);
+    const price = k.quoted > 0 ? k.net : k.suggested;
+    return { stock: p.stock, cost: k.cost, price, profit: price - k.cost };
+  });
   return html`
     <${PageHead} title="Pakker"><button class="btn primary" onClick=${() => go('pakker/ny')}>+ Ny pakke</button><//>
     <p class="muted">En pakke er en samling produkter og rekvisita, f.eks. 3 coastere + 3 korkplater + 1 pose. Pris = selvkost × påslag.</p>
     <${SearchBox} value=${q} onInput=${setQ}/>
+    ${items.length > 0 && html`<${ProfitSummary} rows=${rows} count=${items.length}/>
+      <p class="muted small" style="margin-top:-6px">Lagersummer gjelder ferdigpakkede pakker og bruker salgspris${s.vatRate ? ' eks. MVA' : ''}, eller foreslått pris der salgspris mangler. Linjene viser fortjeneste per pakke (* = beregnet fra foreslått pris).</p>`}
     ${items.length === 0 ? html`<${Empty} icon="🎁" title="Ingen pakker ennå">Lag en pakke for å beregne pris på et sett av produkter og rekvisita.<//>` : html`
     <div class="cards">${items.map(p => {
-      const k = packageCostOf(p);
+      const k = costs.get(p.id);
+      const pr = k.profit ?? (k.suggested - k.cost);
       const can = packagesPossible(p);
       return html`<a class="item" key=${p.id} href=${'#/pakker/' + p.id}>
         <${Thumb} src=${p.thumb} icon="🎁"/>
@@ -29,6 +39,7 @@ function PackageList() {
         </div>
         <div class="metric hide-sm"><div>${money(k.cost)}</div><div class="muted">selvkost</div></div>
         <div class="metric"><div>${k.quoted ? money(k.quoted) : money(k.suggested)}</div><div class="muted">${k.quoted ? 'salgspris' : 'foreslått'}</div></div>
+        <div class="metric"><div class=${pr < 0 ? 'neg' : 'pos'}>${money(pr)}</div><div class="muted">fortjeneste${k.quoted ? '' : '*'}</div></div>
         <div class="metric hide-sm"><${StockBadge} c="packages" item=${p}/></div>
       </a>`;
     })}</div>`}`;

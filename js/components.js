@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef } from './lib.js';
 import * as S from './store.js';
 import {
   num, uid, compressImage, makeThumb, generateEan, loadScript, SCANNER_URL, JSZIP_URL, JSBARCODE_URL,
-  downloadBlob, dataUrlToBlob, dataUrlBase64, safeName, fmt, isEan13,
+  downloadBlob, dataUrlToBlob, dataUrlBase64, safeName, fmt, isEan13, money,
 } from './util.js';
 import {
   allBarcodes, stockField, unitOf, stockOf, moveStock, setCount, registerPrint, packPackage, sellPackageDirect,
@@ -66,6 +66,25 @@ export function textMatch(q, ...vals) {
   q = q.trim().toLowerCase();
   if (!q) return true;
   return vals.some(v => String(v || '').toLowerCase().includes(q));
+}
+
+// Summerer lager, selvkost, salgsverdi og fortjeneste for en liste.
+// rows: [{ stock, cost, price, profit }] der price/profit er per stk (salgspris, ellers foreslått pris)
+export function ProfitSummary({ rows, count }) {
+  let units = 0, cost = 0, value = 0, profit = 0;
+  for (const r of rows) {
+    const n = Math.max(0, num(r.stock));
+    units += n; cost += n * r.cost; value += n * r.price; profit += n * r.profit;
+  }
+  const margin = value > 0 ? profit / value : null;
+  return html`<div class="grid-stats">
+    <div class="stat"><div class="v">${fmt(count, 0)}</div><div class="l">Varer i listen</div></div>
+    <div class="stat"><div class="v">${fmt(units, 0)} stk</div><div class="l">På lager</div></div>
+    <div class="stat"><div class="v">${money(cost)}</div><div class="l">Selvkost lager</div></div>
+    <div class="stat"><div class="v">${money(value)}</div><div class="l">Salgsverdi lager</div></div>
+    <div class="stat"><div class="v ${profit < 0 ? 'neg' : 'pos'}">${money(profit)}</div>
+      <div class="l">Sum fortjeneste lager${margin != null ? ` (${fmt(margin * 100, 1)} %)` : ''}</div></div>
+  </div>`;
 }
 
 /* ---------- Inputs ---------- */
