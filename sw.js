@@ -1,6 +1,6 @@
 // Service worker: gjør appen tilgjengelig offline og installerbar.
 // Øk versjonen ved hver publisering for å tvinge oppdatering.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = '3dkalk-' + VERSION;
 const CORE = [
   './', './index.html', './styles.css', './manifest.webmanifest',
@@ -13,7 +13,7 @@ const CORE = [
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'cdn.sheetjs.com', 'www.gstatic.com'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -26,7 +26,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin === location.origin) {
     // Nettverk først (får alltid nyeste versjon), cache ved frakobling
-    e.respondWith(fetch(req).then(res => {
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
