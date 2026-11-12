@@ -1,0 +1,36 @@
+rules_version = '2';
+// Sikkerhetsregler for 3D Print Kalkulator.
+// Kun e-postadresser som finnes i samlingen "members" får lese/skrive data.
+// Den første brukeren kan opprette arbeidsområdet (meta/owner) og blir administrator.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function memberPath() { return /databases/$(db)/documents/members/$(myEmail()); }
+    function isMember() { return signedIn() && exists(memberPath()); }
+    function isAdmin() { return isMember() && get(memberPath()).data.role == 'admin'; }
+    function ownerPath() { return /databases/$(db)/documents/meta/owner; }
+
+    match /meta/owner {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.email == myEmail();
+      allow update, delete: if false;
+    }
+
+    match /members/{email} {
+      allow read: if isMember() || (signedIn() && email == myEmail());
+      allow create: if isAdmin()
+        || (signedIn() && email == myEmail() && request.resource.data.role == 'admin'
+            && !exists(ownerPath()) && existsAfter(ownerPath())
+            && getAfter(ownerPath()).data.email == myEmail());
+      allow update, delete: if isAdmin();
+    }
+
+    match /{coll}/{id} {
+      allow read, write: if coll != 'members' && coll != 'meta' && isMember();
+    }
+  }
+}
