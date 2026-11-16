@@ -1,6 +1,6 @@
 // Service worker: gjør appen tilgjengelig offline og installerbar.
 // Øk versjonen ved hver publisering for å tvinge oppdatering.
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = '3dkalk-' + VERSION;
 const CORE = [
   './', './index.html', './styles.css', './manifest.webmanifest',
@@ -8,7 +8,7 @@ const CORE = [
   './js/app.js', './js/lib.js', './js/store.js', './js/calc.js', './js/util.js', './js/schema.js', './js/model.js',
   './js/components.js', './js/crud.js', './js/backup.js', './js/firebase-config.js',
   './js/pages/products.js', './js/pages/packages.js', './js/pages/inventory.js', './js/pages/scan.js',
-  './js/pages/labels.js', './js/pages/misc.js',
+  './js/pages/labels.js', './js/pages/misc.js', './js/pages/events.js', './js/pages/orders.js', './js/events.js',
 ];
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'cdn.sheetjs.com', 'www.gstatic.com'];
 

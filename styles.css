@@ -277,3 +277,87 @@ tr.click:hover td { background: var(--panel-2); }
   .sheet { break-after: page; page-break-after: always; }
   .sheet:last-child { break-after: auto; page-break-after: auto; }
 }
+
+/* ---------- Messer: pakking ---------- */
+.pick-list { display: flex; flex-direction: column; gap: 6px; }
+.pick-row { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.pick-row.on { border-color: var(--accent); background: var(--accent-soft); }
+.pick-row .grow { cursor: pointer; min-width: 0; }
+.pick-row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stepper { display: flex; align-items: center; gap: 4px; flex: none; }
+.stepper input { width: 58px; text-align: center; padding: 6px; min-height: 34px; }
+.stepper .btn { min-width: 34px; padding: 4px 8px; }
+.stepper .qty { min-width: 26px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ---------- Messer: kasse ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
+.tile {
+  position: relative; display: flex; flex-direction: column; text-align: left; gap: 4px; padding: 8px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; cursor: pointer; box-shadow: var(--shadow);
+}
+.tile:hover { border-color: var(--accent); }
+.tile.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.tile.empty { opacity: .55; }
+.tile:disabled { cursor: not-allowed; }
+.tile-img { aspect-ratio: 1; border-radius: 8px; background: var(--panel-2); overflow: hidden; display: grid; place-items: center; font-size: 30px; }
+.tile-img img { width: 100%; height: 100%; object-fit: cover; }
+.tile-name { font-weight: 600; font-size: .9rem; line-height: 1.2; max-height: 2.4em; overflow: hidden; }
+.tile-meta { display: flex; justify-content: space-between; gap: 4px; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.tile-count { position: absolute; top: 4px; right: 4px; min-width: 26px; height: 26px; border-radius: 13px; padding: 0 6px; background: var(--accent); color: #fff; font-weight: 700; display: grid; place-items: center; }
+@media (prefers-color-scheme: dark) { .tile-count { color: #062a26; } }
+.cart-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.cart-row .mini-name { margin-bottom: 4px; }
+.cart-bar { display: none; }
+@media (max-width: 1100px) {
+  .cart-bar {
+    display: block; position: fixed; left: 12px; right: 84px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 30;
+    border: 0; border-radius: 14px; padding: 14px 16px; background: var(--text); color: var(--bg); font: inherit; font-weight: 650; text-align: left;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25); cursor: pointer;
+  }
+  .till { padding-bottom: 70px; }
+}
+@media (max-width: 600px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; } }
+
+/* ---------- Messer: regnskap ---------- */
+.acc-table th.today { color: var(--accent-2); }
+.acc-table tr.strong td { font-weight: 650; }
+.acc-table tr.sub td { color: var(--muted); font-size: .85rem; }
+.acc-table tr.total td { border-top: 2px solid var(--line); font-size: 1.02rem; }
+.acc-table td:first-child { white-space: nowrap; }
+.acc-table td:last-child, .acc-table th:last-child { background: var(--panel-2); }
+
+/* ---------- Messer: statistikk ---------- */
+.stat .v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heat td.heat-cell { position: relative; background: transparent; }
+.heat td.heat-cell[style] { background: color-mix(in srgb, var(--accent) calc(var(--a) * 100%), transparent); }
+.heat td.heat-cell span { position: relative; font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px; }
+.bar-label { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.bar-track { height: 18px; }
+.bar { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 0 4px 4px 0; }
+.bar-val { font-variant-numeric: tabular-nums; font-size: .9rem; text-align: right; min-width: 80px; }
+.hbars { display: flex; align-items: flex-end; gap: 4px; height: 180px; overflow-x: auto; }
+.hbar-col { flex: 1; min-width: 26px; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.hbar-val { font-size: .7rem; color: var(--muted); height: 16px; font-variant-numeric: tabular-nums; }
+.hbar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.hbar { display: block; width: 100%; min-height: 2px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.hbar-label { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+tr.muted td { color: var(--muted); }
+
+/* ---------- Utskrift av rapporter (pakkeliste, regnskap) ---------- */
+#print-root .report { padding: 12mm 14mm; color: #000; background: #fff; font: 10pt/1.4 Arial, Helvetica, sans-serif; page: report; }
+@page report { size: A4 portrait; margin: 12mm 0; }
+.report h1 { font-size: 16pt; margin-bottom: 2mm; }
+.report h2 { font-size: 12pt; margin: 5mm 0 2mm; }
+.report table { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
+.report th, .report td { border-bottom: 1px solid #ccc; padding: 1.5mm 2mm; color: #000; background: none !important; }
+.report .panel { border: 0; box-shadow: none; padding: 0; background: none; }
+.report .grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+.report .stat { border: 1px solid #ccc; box-shadow: none; padding: 2mm 3mm; background: none; }
+.report .stat .v { font-size: 13pt; }
+.report .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.report .badge, .report .muted { color: #444; }
+.report .pos, .report .neg { color: #000; }
+.heat td.heat-cell.dark span { color: var(--bg); }
+.tile-meta { flex-wrap: wrap; }

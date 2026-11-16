@@ -1,6 +1,6 @@
 // Backup til Excel / ZIP (Excel + bilder) og gjenoppretting.
 import * as S from './store.js';
-import { SCHEMAS, SETTINGS_FIELDS } from './schema.js';
+import { SCHEMAS, SETTINGS_FIELDS, LINE_SHEETS } from './schema.js';
 import { productCostOf, packageCostOf, TYPE_LABEL } from './model.js';
 import { printerDepreciation, materialPricePerKg } from './calc.js';
 import { downloadBlob, loadScript, JSZIP_URL, safeName, dataUrlBase64, makeThumb, num, uid, round, stamp, hoursToHM } from './util.js';
@@ -10,9 +10,11 @@ let xp;
 const xlsx = () => (xp ||= import(XLSX_URL));
 const zipLib = async () => { await loadScript(JSZIP_URL); return window.JSZip; };
 
-export const DATA_COLLS = ['printers', 'materials', 'products', 'supplies', 'packages', 'movements'];
-const IMG_SHEET = 'Bilder', ITEMS_SHEET = 'Pakkeinnhold', SET_SHEET = 'Innstillinger';
-const TYPE_FROM_LABEL = Object.fromEntries(Object.entries(TYPE_LABEL).flatMap(([k, v]) => [[v, k], [k, k]]));
+export const DATA_COLLS = ['printers', 'materials', 'products', 'supplies', 'packages', 'movements',
+  'events', 'eventStock', 'eventCosts', 'sales', 'orders'];
+const IMG_SHEET = 'Bilder', SET_SHEET = 'Innstillinger';
+const TYPE_LABEL_ALL = { ...TYPE_LABEL, custom: 'Fritekst' };
+const TYPE_FROM_LABEL = Object.fromEntries(Object.entries(TYPE_LABEL_ALL).flatMap(([k, v]) => [[v, k], [k, k]]));
 
 async function gather() {
   const data = {};
@@ -88,11 +90,22 @@ async function buildWorkbook(data, imageRows) {
     X.utils.book_append_sheet(wb, sheetFrom(X, headers, rows), SCHEMAS[c].sheet);
   }
 
-  const pi = [];
-  for (const p of data.packages) for (const it of p.items || []) {
-    pi.push({ 'Pakke-ID': p.id, 'Pakke': p.name, 'Type': TYPE_LABEL[it.type], 'Vare-ID': it.id, 'Vare': S.get(it.type, it.id)?.name || '', 'Antall': num(it.qty) });
+  // Undertabeller: pakkeinnhold, salgslinjer, bestillingslinjer
+  for (const ls of LINE_SHEETS) {
+    const headers = [ls.parent, ...(ls.parentName ? [ls.parentName] : []), ...ls.cols.map(c => c.l)];
+    const rows = [];
+    for (const p of data[ls.coll] || []) for (const it of p[ls.field] || []) {
+      const r = { [ls.parent]: p.id };
+      if (ls.parentName) r[ls.parentName] = p.name;
+      for (const col of ls.cols) {
+        if (col.t === 'type') r[col.l] = TYPE_LABEL_ALL[it[col.k]] || it[col.k] || '';
+        else if (col.t === 'name') r[col.l] = S.get(it.type, it.id)?.name || '';
+        else r[col.l] = it[col.k] ?? '';
+      }
+      rows.push(r);
+    }
+    X.utils.book_append_sheet(wb, sheetFrom(X, headers, rows), ls.sheet);
   }
-  X.utils.book_append_sheet(wb, sheetFrom(X, ['Pakke-ID', 'Pakke', 'Type', 'Vare-ID', 'Vare', 'Antall'], pi), ITEMS_SHEET);
 
   if (imageRows) {
     X.utils.book_append_sheet(wb, sheetFrom(X, ['ID', 'Type', 'Vare-ID', 'Vare', 'Fil', 'Bredde', 'Høyde', 'Lagt til', 'Lagt til av'], imageRows), IMG_SHEET);
@@ -164,6 +177,7 @@ function convert(f, v) {
   switch (f.t) {
     case 'num': return num(v);
     case 'int': return Math.round(num(v));
+    case 'bool': return typeof v === 'boolean' ? v : /^(ja|true|1|x|sann)$/i.test(String(v).trim());
     case 'ts': return v instanceof Date ? v.getTime() : (typeof v === 'number' ? v : (Date.parse(v) || undefined));
     case 'date': return v instanceof Date ? new Date(v.getTime() - v.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : String(v);
     case 'hm':
@@ -210,17 +224,26 @@ export async function parseBackup(file) {
   for (const c of DATA_COLLS) {
     const rows = rowsOf(SCHEMAS[c].sheet);
     if (!rows) continue;
-    out.colls[c] = rows.map(r => rowToDoc(c, r)).filter(d => c === 'movements' || d.name);
+    out.colls[c] = rows.map(r => rowToDoc(c, r)).filter(d => !SCHEMAS[c].fields.some(f => f.k === 'name' && f.req) || d.name);
     out.counts[c] = out.colls[c].length;
   }
-  const pr = rowsOf(ITEMS_SHEET);
-  if (pr && out.colls.packages) {
-    const by = new Map(out.colls.packages.map(p => [p.id, p]));
-    out.colls.packages.forEach(p => { p.items = []; });
-    for (const r of pr) {
-      const p = by.get(String(r['Pakke-ID']));
-      const type = TYPE_FROM_LABEL[r['Type']];
-      if (p && type && r['Vare-ID']) p.items.push({ type, id: String(r['Vare-ID']), qty: num(r['Antall']) || 1 });
+  for (const ls of LINE_SHEETS) {
+    const lr = rowsOf(ls.sheet);
+    if (!lr || !out.colls[ls.coll]) continue;
+    const by = new Map(out.colls[ls.coll].map(p => [p.id, p]));
+    out.colls[ls.coll].forEach(p => { p[ls.field] = []; });
+    for (const r of lr) {
+      const p = by.get(String(r[ls.parent]));
+      if (!p) continue;
+      const it = {};
+      for (const col of ls.cols) {
+        const v = r[col.l];
+        if (col.t === 'name') continue;
+        if (col.t === 'type') { const t = TYPE_FROM_LABEL[v]; if (t) it[col.k] = t; }
+        else { const cv = convert(col, v); if (cv !== undefined) it[col.k] = cv; }
+      }
+      if (ls.coll === 'packages' && (!it.type || !it.id)) continue;
+      p[ls.field].push(it);
     }
   }
   if (zip) {

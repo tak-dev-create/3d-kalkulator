@@ -375,7 +375,7 @@ export function StockDialog({ c, item, onClose, initialMode }) {
     <div style="margin-bottom:12px"><${Seg} value=${mode} options=${modes} onChange=${changeMode}/></div>
     <div class="form-grid">
       <label class="field"><span>${qtyLabel}</span><${NumInput} value=${qty} onChange=${setQty} autofocus/></label>
-      ${reasons.length > 0 && html`<label class="field"><span>Årsak</span><select value=${reason} onChange=${e => setReason(e.target.value)}>${reasons.map(r => html`<option>${r}</option>`)}</select></label>`}
+      ${reasons.length > 0 && html`<label class="field"><span>Årsak</span><select value=${reason} onChange=${e => setReason(e.target.value)}>${reasons.map(r => html`<option value=${r} selected=${r === reason}>${r}</option>`)}</select></label>`}
       <label class="field wide"><span>Notat (valgfritt)</span><input value=${note} onInput=${e => setNote(e.target.value)} placeholder="F.eks. ordrenummer eller kunde"/></label>
     </div>
     ${isMat && mode !== 'count' && html`<div class="row" style="margin-top:8px">

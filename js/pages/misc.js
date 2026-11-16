@@ -2,7 +2,8 @@
 import { html, useState, useRef } from '../lib.js';
 import * as S from '../store.js';
 import { SETTINGS_FIELDS } from '../schema.js';
-import { money, fmt, fmtDate, num } from '../util.js';
+import { money, fmt, fmtDate, num, todayISO } from '../util.js';
+import { activeEvents, openOrders, eventSales, orderTotal, todayKey, dayLabel, EVENT_STATUS } from '../events.js';
 import {
   productCostOf, packageCostOf, isLow, stockOf, unitOf, byName, seedOps, STOCK_COLLS, TYPE_LABEL, TYPE_ROUTE, TYPE_ICON,
 } from '../model.js';
@@ -21,6 +22,33 @@ export function BackupReminder() {
 }
 
 /* ---------------- Oversikt ---------------- */
+// Pågående messer og åpne bestillinger
+function ActiveBoxes() {
+  const evs = activeEvents().sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
+  const orders = openOrders();
+  if (!evs.length && !orders.length) return null;
+  const today = todayISO();
+  return html`<div class="two-col" style="margin-bottom:14px">
+    ${evs.length > 0 && html`<div class="panel"><h2>🎪 Messer</h2><div class="mini-list">${evs.map(ev => {
+      const sales = eventSales(ev.id), todaySales = sales.filter(s => s.day === todayKey());
+      return html`<a class="mini-row" key=${ev.id} href=${'#/messer/' + ev.id}>
+        <div class="mini-main"><div class="mini-name">${ev.name}</div>
+          <div class="mini-sub">${EVENT_STATUS[ev.status]} · ${dayLabel(ev.startDate)}${ev.location ? ' · ' + ev.location : ''}</div></div>
+        <div class="mini-val"><div>${money(sales.reduce((a, x) => a + num(x.total), 0))}</div>
+          <div class="mini-sub">${todaySales.length ? `i dag ${money(todaySales.reduce((a, x) => a + num(x.total), 0))}` : `${sales.length} salg`}</div></div>
+      </a>`;
+    })}</div></div>`}
+    ${orders.length > 0 && html`<div class="panel"><h2>📝 Åpne bestillinger <span class="badge accent">${orders.length}</span></h2><div class="mini-list">${orders.slice(0, 6).map(o => html`
+      <a class="mini-row" key=${o.id} href=${'#/bestillinger/' + o.id}>
+        <span class="ico small muted">#${o.no}</span>
+        <div class="mini-main"><div class="mini-name">${o.customer}</div>
+          <div class="mini-sub">${(o.lines || []).map(l => `${fmt(l.qty)} × ${l.name}${l.variant ? ` (${l.variant})` : ''}`).join(', ')}</div></div>
+        <div class="mini-val"><div class=${o.dueDate && o.dueDate < today ? 'neg' : ''}>${o.dueDate ? dayLabel(o.dueDate) : '–'}</div>
+          <div class="mini-sub">${money(orderTotal(o))}</div></div>
+      </a>`)}</div>
+      ${orders.length > 6 && html`<a class="small" href="#/bestillinger">Se alle ${orders.length} →</a>`}</div>`}
+  </div>`;
+}
 export function Dashboard() {
   const prods = S.list('products'), sup = S.list('supplies'), pk = S.list('packages'), mats = S.list('materials');
   const empty = !S.list('printers').length && !mats.length && !prods.length;
@@ -37,8 +65,11 @@ export function Dashboard() {
   }
   return html`
     <${PageHead} title=${s.companyName ? `Oversikt – ${s.companyName}` : 'Oversikt'}/>
-    ${S.state.mode === 'local' && html`<div class="notice info">Lokal modus: data lagres bare i denne nettleseren. Koble til Firebase for synk mellom enheter og brukere.</div>`}
+    ${S.state.mode === 'local' && html`<div class="notice info">${S.TEST_MODE
+      ? '🧪 Testmodus: dette er en egen testdatabase i nettleseren. Ekte data i Firebase berøres ikke.'
+      : 'Lokal modus: data lagres bare i denne nettleseren. Koble til Firebase for synk mellom enheter og brukere.'}</div>`}
     <${BackupReminder}/>
+    <${ActiveBoxes}/>
     ${empty && html`<div class="panel"><h2>Kom i gang</h2>
       <p>Legg inn printerne, filamentene og innstillingene fra Excel-arket ditt («3D pris kalkulator.xlsx»), pluss et eksempel på produkt og pakke.</p>
       <div class="row"><button class="btn primary" onClick=${seed}>Last inn startdata</button>
@@ -88,11 +119,12 @@ export function Log() {
     </div>
     ${rows.length === 0 ? html`<${Empty} icon="📜" title="Ingen bevegelser"><//>` : html`
     <div class="panel table-wrap"><table>
-      <thead><tr><th>Tid</th><th>Vare</th><th class="num">Endring</th><th>Årsak</th><th>Notat</th><th>Bruker</th></tr></thead>
+      <thead><tr><th>Tid</th><th>Vare</th><th class="num">Endring</th><th>Lager</th><th>Årsak</th><th>Notat</th><th>Bruker</th></tr></thead>
       <tbody>${rows.slice(0, 1000).map(m => html`<tr key=${m.id}>
         <td class="small muted" style="white-space:nowrap">${fmtDate(m.ts)}</td>
         <td>${TYPE_ICON[m.c] || ''} ${S.get(m.c, m.itemId) ? html`<a href=${'#/' + TYPE_ROUTE[m.c] + '/' + m.itemId}>${m.name}</a>` : m.name}</td>
         <td class=${'num ' + (m.delta < 0 ? 'neg' : 'pos')}>${m.delta > 0 ? '+' : ''}${fmt(m.delta)} ${m.unit}</td>
+        <td class="small">${m.loc || "Hus"}</td>
         <td>${m.reason}${m.ref && m.ref !== m.name ? html`<div class="small muted">${m.ref}</div>` : ''}</td>
         <td class="small">${m.note}</td><td class="small muted">${m.user}</td></tr>`)}</tbody>
     </table></div>
@@ -123,7 +155,7 @@ export function Backup() {
     if (!confirm(msg)) return;
     await run(async () => { await restore(parsed.data, mode, setBusy); setParsed(null); }, 'Gjenoppretting fullført');
   }
-  const LABELS = { printers: 'Printere', materials: 'Filament', products: 'Produkter', supplies: 'Rekvisita', packages: 'Pakker', movements: 'Lagerbevegelser', images: 'Bilder' };
+  const LABELS = { printers: 'Printere', materials: 'Filament', products: 'Produkter', supplies: 'Rekvisita', packages: 'Pakker', movements: 'Lagerbevegelser', events: 'Messer', eventStock: 'Messelager', eventCosts: 'Messekostnader', sales: 'Salg', orders: 'Bestillinger', images: 'Bilder' };
   return html`
     <${PageHead} title="Backup og gjenoppretting"/>
     <p class="muted">Siste backup: <b>${s.lastBackupAt ? fmtDate(s.lastBackupAt) : 'aldri'}</b>${s.lastBackupBy ? ` av ${s.lastBackupBy}` : ''}</p>

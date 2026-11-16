@@ -6,14 +6,20 @@ import { DEFAULT_SETTINGS } from './calc.js';
 import { num } from './util.js';
 
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
-export const COLLS = ['settings', 'printers', 'materials', 'products', 'supplies', 'packages', 'movements', 'members'];
+export const COLLS = ['settings', 'printers', 'materials', 'products', 'supplies', 'packages', 'movements', 'members',
+  'events', 'eventStock', 'eventCosts', 'sales', 'orders'];
+
+// Testmodus: på localhost brukes alltid en lokal testdatabase (ikke Firebase), med mindre ?sky er satt.
+const DEV_HOST = ['localhost', '127.0.0.1'].includes(location.hostname);
+const FORCE_CLOUD = new URLSearchParams(location.search).has('sky');
+export const TEST_MODE = DEV_HOST && !FORCE_CLOUD;
 const emptyCache = () => Object.fromEntries(COLLS.map(c => [c, new Map()]));
 let cache = emptyCache();
 const listeners = new Set();
 let be = null;
 
 export const state = {
-  mode: firebaseConfig && firebaseConfig.apiKey ? 'cloud' : 'local',
+  mode: firebaseConfig && firebaseConfig.apiKey && !TEST_MODE ? 'cloud' : 'local',
   user: null, member: null, ready: false, authReady: false, error: null, needsVerify: false,
 };
 export const auth = {};

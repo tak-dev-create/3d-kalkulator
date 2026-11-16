@@ -8,11 +8,15 @@ import { Supplies, Equipment } from './pages/inventory.js';
 import { Scan } from './pages/scan.js';
 import { Labels } from './pages/labels.js';
 import { Dashboard, Log, Backup, Settings } from './pages/misc.js';
+import { Events } from './pages/events.js';
+import { Orders } from './pages/orders.js';
 
 const ROUTES = [
   { path: '', label: 'Oversikt', icon: '🏠', comp: Dashboard },
   { path: 'produkter', label: 'Produkter & kalkyle', icon: '🧮', comp: Products },
   { path: 'pakker', label: 'Pakker', icon: '🎁', comp: Packages },
+  { path: 'messer', label: 'Messer', icon: '🎪', comp: Events },
+  { path: 'bestillinger', label: 'Bestillinger', icon: '📝', comp: Orders },
   { path: 'rekvisita', label: 'Rekvisita', icon: '📦', comp: Supplies },
   { path: 'utstyr', label: 'Filament & printere', icon: '🧵', comp: Equipment },
   { path: 'skann', label: 'Skann', icon: '📷', comp: Scan },
@@ -67,7 +71,7 @@ function Shell({ route, parts }) {
       <div class="brand"><img src="icons/icon-192.png" alt=""/> 3D Print Kalkulator</div>
       <nav class="nav">${ROUTES.map(r => html`<a href=${'#/' + r.path} class=${r === route ? 'active' : ''}><span class="ico">${r.icon}</span>${r.label}</a>`)}</nav>
       <div class="foot">
-        ${S.state.mode === 'cloud' ? html`<div>${S.state.user?.email}</div>` : html`<div>Lokal modus</div>`}
+        ${S.state.mode === 'cloud' ? html`<div>${S.state.user?.email}</div>` : html`<div>${S.TEST_MODE ? "🧪 Testmodus (testdata)" : "Lokal modus"}</div>`}
         ${S.state.error && html`<div class="neg">${S.state.error}</div>`}
         <div>${navigator.onLine ? '' : '⚠ Frakoblet – endringer synkes senere'}</div>
       </div>

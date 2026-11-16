@@ -116,10 +116,127 @@ export const SCHEMAS = {
       { k: 'unit', l: 'Enhet', t: 'text' },
       { k: 'reason', l: 'Årsak', t: 'text' },
       { k: 'note', l: 'Notat', t: 'text' },
+      { k: 'loc', l: 'Lager', t: 'text' },
       { k: 'ref', l: 'Referanse', t: 'text' },
     ],
   },
 };
+
+// Messer, salg og bestillinger
+Object.assign(SCHEMAS, {
+  events: {
+    sheet: 'Messer', title: 'Messe', fields: [
+      ID, NAME,
+      { k: 'location', l: 'Sted', t: 'text' },
+      { k: 'startDate', l: 'Startdato', t: 'date' },
+      { k: 'endDate', l: 'Sluttdato', t: 'date' },
+      { k: 'status', l: 'Status', t: 'text', def: 'planlagt' },
+      NOTES,
+      { k: 'createdAt', l: 'Opprettet', t: 'ts' },
+      { k: 'closedAt', l: 'Avsluttet', t: 'ts' },
+    ],
+  },
+  eventStock: {
+    sheet: 'Messelager', title: 'Messelager', fields: [
+      ID,
+      { k: 'eventId', l: 'Messe-ID', t: 'text' },
+      { k: 'c', l: 'Type', t: 'text' },
+      { k: 'itemId', l: 'Vare-ID', t: 'text' },
+      { k: 'name', l: 'Vare', t: 'text' },
+      { k: 'qty', l: 'På messen', t: 'num' },
+      { k: 'sent', l: 'Sendt med', t: 'num' },
+      { k: 'sold', l: 'Solgt', t: 'num' },
+      { k: 'returned', l: 'Returnert', t: 'num' },
+      { k: 'lost', l: 'Svinn', t: 'num' },
+      { k: 'ordered', l: 'Levert bestillinger', t: 'num' },
+    ],
+  },
+  eventCosts: {
+    sheet: 'Messekostnader', title: 'Kostnad', fields: [
+      ID,
+      { k: 'eventId', l: 'Messe-ID', t: 'text' },
+      { k: 'day', l: 'Dag', t: 'text' },
+      { k: 'category', l: 'Kategori', t: 'text' },
+      { k: 'description', l: 'Beskrivelse', t: 'text' },
+      { k: 'amount', l: 'Beløp', t: 'num' },
+      { k: 'ts', l: 'Registrert', t: 'ts' },
+      { k: 'user', l: 'Bruker', t: 'text' },
+    ],
+  },
+  sales: {
+    sheet: 'Salg', title: 'Salg', fields: [
+      ID,
+      { k: 'eventId', l: 'Messe-ID', t: 'text' },
+      { k: 'ts', l: 'Tidspunkt', t: 'ts' },
+      { k: 'day', l: 'Dag', t: 'text' },
+      { k: 'payment', l: 'Betaling', t: 'text' },
+      { k: 'subtotal', l: 'Sum før rabatt', t: 'num' },
+      { k: 'discount', l: 'Rabatt', t: 'num' },
+      { k: 'total', l: 'Totalt', t: 'num' },
+      { k: 'cost', l: 'Varekost', t: 'num' },
+      { k: 'user', l: 'Bruker', t: 'text' },
+      { k: 'note', l: 'Notat', t: 'text' },
+    ],
+  },
+  orders: {
+    sheet: 'Bestillinger', title: 'Bestilling', fields: [
+      ID,
+      { k: 'no', l: 'Nr', t: 'int' },
+      { k: 'customer', l: 'Kunde', t: 'text' },
+      { k: 'phone', l: 'Telefon', t: 'text' },
+      { k: 'email', l: 'E-post', t: 'text' },
+      { k: 'delivery', l: 'Levering', t: 'text', def: 'henting' },
+      { k: 'address', l: 'Adresse', t: 'text' },
+      { k: 'dueDate', l: 'Avtalt dato', t: 'date' },
+      { k: 'eventId', l: 'Messe-ID', t: 'text' },
+      { k: 'status', l: 'Status', t: 'text', def: 'ny' },
+      { k: 'deposit', l: 'Forskudd', t: 'num', def: 0 },
+      { k: 'paid', l: 'Betalt', t: 'bool', def: false },
+      { k: 'deliveredFrom', l: 'Levert fra', t: 'text' },
+      { k: 'deliveredAt', l: 'Levert', t: 'ts' },
+      NOTES,
+      { k: 'createdAt', l: 'Opprettet', t: 'ts' },
+      { k: 'createdBy', l: 'Opprettet av', t: 'text' },
+    ],
+  },
+});
+
+// Undertabeller (lister i et dokument) som får egne ark i Excel
+export const LINE_SHEETS = [
+  {
+    coll: 'packages', field: 'items', sheet: 'Pakkeinnhold', parent: 'Pakke-ID', parentName: 'Pakke',
+    cols: [
+      { k: 'type', l: 'Type', t: 'type' },
+      { k: 'id', l: 'Vare-ID', t: 'text' },
+      { k: '_name', l: 'Vare', t: 'name' },
+      { k: 'qty', l: 'Antall', t: 'num' },
+    ],
+  },
+  {
+    coll: 'sales', field: 'lines', sheet: 'Salgslinjer', parent: 'Salg-ID',
+    cols: [
+      { k: 'c', l: 'Type', t: 'type' },
+      { k: 'itemId', l: 'Vare-ID', t: 'text' },
+      { k: 'name', l: 'Vare', t: 'text' },
+      { k: 'qty', l: 'Antall', t: 'num' },
+      { k: 'unitPrice', l: 'Pris', t: 'num' },
+      { k: 'listPrice', l: 'Listepris', t: 'num' },
+      { k: 'unitCost', l: 'Selvkost', t: 'num' },
+    ],
+  },
+  {
+    coll: 'orders', field: 'lines', sheet: 'Bestillingslinjer', parent: 'Bestilling-ID',
+    cols: [
+      { k: 'type', l: 'Type', t: 'type' },
+      { k: 'itemId', l: 'Vare-ID', t: 'text' },
+      { k: 'name', l: 'Vare', t: 'text' },
+      { k: 'variant', l: 'Farge/variant', t: 'text' },
+      { k: 'qty', l: 'Antall', t: 'num' },
+      { k: 'unitPrice', l: 'Pris', t: 'num' },
+      { k: 'unitCost', l: 'Selvkost', t: 'num' },
+    ],
+  },
+];
 
 export const fieldOf = (c, k) => SCHEMAS[c].fields.find(f => f.k === k);
 export const stockFieldDef = c => SCHEMAS[c].fields.find(f => f.stock);
