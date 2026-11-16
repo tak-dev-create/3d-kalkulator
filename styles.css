@@ -361,3 +361,4 @@ tr.muted td { color: var(--muted); }
 .report .pos, .report .neg { color: #000; }
 .heat td.heat-cell.dark span { color: var(--bg); }
 .tile-meta { flex-wrap: wrap; }
+.mini-row .ico.small { width: auto; min-width: 22px; font-variant-numeric: tabular-nums; }
